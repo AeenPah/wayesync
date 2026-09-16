@@ -21,9 +21,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -38,7 +43,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
-app.UseHttpsRedirection();
 app.MapHub<WaveSyncHub>("/hubs/wavesync");
 
 app.MapControllers();

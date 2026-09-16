@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using WaveSync.Api.Models;
 using WaveSync.Api.Services;
 
 namespace WaveSync.Api.Hubs;
@@ -12,11 +13,22 @@ public class WaveSyncHub : Hub
         _roomState = roomState;
     }
 
-    public async Task JoinRoom(string roomId)
+    public async Task JoinRoom(
+        string roomId,
+        string participantId)
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
-            throw new HubException("Room ID is required.");
+            throw new HubException(
+                "Room ID is required."
+            );
+        }
+
+        if (string.IsNullOrWhiteSpace(participantId))
+        {
+            throw new HubException(
+                "Participant ID is required."
+            );
         }
 
         await Groups.AddToGroupAsync(
@@ -24,12 +36,19 @@ public class WaveSyncHub : Hub
             roomId
         );
 
+        var participant = new Participant
+        {
+            Id = participantId,
+            ConnectionId = Context.ConnectionId
+        };
+
         _roomState.AddParticipant(
             roomId,
-            Context.ConnectionId
+            participant
         );
 
-        var participants = _roomState.GetParticipants(roomId);
+        var participants =
+            _roomState.GetParticipants(roomId);
 
         await Clients.Caller.SendAsync(
             "RoomState",
@@ -37,15 +56,19 @@ public class WaveSyncHub : Hub
             {
                 roomId,
                 participants
-            });
-
-        await Clients.OthersInGroup(roomId).SendAsync(
-            "ParticipantJoined",
-            Context.ConnectionId
+            }
         );
+
+        await Clients.OthersInGroup(roomId)
+            .SendAsync(
+                "ParticipantJoined",
+                participant
+            );
     }
 
-    public async Task LeaveRoom(string roomId)
+    public async Task LeaveRoom(
+        string roomId,
+        string participantId)
     {
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
@@ -54,30 +77,35 @@ public class WaveSyncHub : Hub
 
         _roomState.RemoveParticipant(
             roomId,
-            Context.ConnectionId
+            participantId
         );
 
-        await Clients.OthersInGroup(roomId).SendAsync(
-            "ParticipantLeft",
-            Context.ConnectionId
-        );
+        await Clients.OthersInGroup(roomId)
+            .SendAsync(
+                "ParticipantLeft",
+                participantId
+            );
     }
 
     public override async Task OnDisconnectedAsync(
         Exception? exception)
     {
-        var rooms = _roomState.RemoveParticipantFromAllRooms(
-            Context.ConnectionId
-        );
+        var rooms =
+            _roomState.RemoveConnection(
+                Context.ConnectionId
+            );
 
         foreach (var roomId in rooms)
         {
-            await Clients.Group(roomId).SendAsync(
-                "ParticipantLeft",
-                Context.ConnectionId
-            );
+            await Clients.Group(roomId)
+                .SendAsync(
+                    "ParticipantLeft",
+                    Context.ConnectionId
+                );
         }
 
-        await base.OnDisconnectedAsync(exception);
+        await base.OnDisconnectedAsync(
+            exception
+        );
     }
 }

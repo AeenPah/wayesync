@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using WaveSync.Api.Models;
 
 namespace WaveSync.Api.Services;
 
@@ -6,41 +7,49 @@ public class RoomStateService
 {
     private readonly ConcurrentDictionary<
         string,
-        ConcurrentDictionary<string, byte>
+        ConcurrentDictionary<string, Participant>
     > _rooms = new();
 
-    public IReadOnlyCollection<string> GetParticipants(string roomId)
+    public IReadOnlyCollection<Participant> GetParticipants(string roomId)
     {
         if (!_rooms.TryGetValue(roomId, out var participants))
         {
             return [];
         }
 
-        return participants.Keys.ToArray();
+        return participants.Values.ToArray();
     }
 
-    public void AddParticipant(string roomId, string connectionId)
+    public void AddParticipant(
+        string roomId,
+        Participant participant)
     {
         var participants = _rooms.GetOrAdd(
             roomId,
-            _ => new ConcurrentDictionary<string, byte>()
+            _ => new ConcurrentDictionary<string, Participant>()
         );
 
-        participants.TryAdd(connectionId, 0);
+        participants[participant.Id] = participant;
     }
 
-    public void RemoveParticipant(string roomId, string connectionId)
+    public void RemoveParticipant(string roomId, string participantId)
     {
         if (!_rooms.TryGetValue(roomId, out var participants))
         {
             return;
         }
 
-        participants.TryRemove(connectionId, out _);
+        participants.TryRemove(
+            participantId,
+            out _
+        );
 
         if (participants.IsEmpty)
         {
-            _rooms.TryRemove(roomId, out _);
+            _rooms.TryRemove(
+                roomId,
+                out _
+            );
         }
     }
 
@@ -63,5 +72,39 @@ public class RoomStateService
         }
 
         return removedFrom;
+    }
+
+    public IReadOnlyCollection<string> RemoveConnection(string connectionId)
+    {
+        var removedRooms = new List<string>();
+
+        foreach (var room in _rooms)
+        {
+            var participant = room.Value.Values
+                .FirstOrDefault(p =>
+                    p.ConnectionId == connectionId);
+
+            if (participant is null)
+            {
+                continue;
+            }
+
+            room.Value.TryRemove(
+                participant.Id,
+                out _
+            );
+
+            removedRooms.Add(room.Key);
+
+            if (room.Value.IsEmpty)
+            {
+                _rooms.TryRemove(
+                    room.Key,
+                    out _
+                );
+            }
+        }
+
+        return removedRooms;
     }
 }

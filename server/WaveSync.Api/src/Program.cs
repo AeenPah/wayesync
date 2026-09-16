@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WaveSync.Api.Data;
+using WaveSync.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -33,6 +36,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("Frontend");
 app.UseHttpsRedirection();
+app.MapHub<WaveSyncHub>("/hubs/wavesync");
 
 app.MapControllers();
 

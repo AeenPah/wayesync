@@ -10,6 +10,11 @@ public class WaveSyncHub : Hub
             Context.ConnectionId,
             roomId
         );
+
+        await Clients.Group(roomId).SendAsync(
+            "ParticipantJoined",
+            Context.ConnectionId
+        );
     }
 
     public async Task LeaveRoom(string roomId)
@@ -17,6 +22,11 @@ public class WaveSyncHub : Hub
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
             roomId
+        );
+
+        await Clients.Group(roomId).SendAsync(
+            "ParticipantLeft",
+            Context.ConnectionId
         );
     }
 }

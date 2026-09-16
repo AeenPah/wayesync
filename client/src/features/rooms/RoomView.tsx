@@ -6,6 +6,11 @@ import {
 
 import { createWaveSyncConnection } from "../../realtime/wavesync";
 
+interface RoomState {
+  roomId: string;
+  participants: string[];
+}
+
 interface RoomViewProps {
   roomId: string;
 }
@@ -19,17 +24,12 @@ export function RoomView({ roomId }: RoomViewProps) {
   useEffect(() => {
     const hubConnection = createWaveSyncConnection();
 
-    const start = async () => {
-      try {
-        await hubConnection.start();
-
-        await hubConnection.invoke("JoinRoom", roomId);
-
-        setConnection(hubConnection);
-      } catch (error) {
-        console.error("Failed to connect to WaveSync:", error);
-      }
-    };
+    hubConnection.on(
+      "RoomState",
+      (state: RoomState) => {
+        setParticipants(state.participants);
+      },
+    );
 
     hubConnection.on(
       "ParticipantJoined",
@@ -53,6 +53,24 @@ export function RoomView({ roomId }: RoomViewProps) {
       },
     );
 
+    const start = async () => {
+      try {
+        await hubConnection.start();
+
+        await hubConnection.invoke(
+          "JoinRoom",
+          roomId,
+        );
+
+        setConnection(hubConnection);
+      } catch (error) {
+        console.error(
+          "Failed to connect to WaveSync:",
+          error,
+        );
+      }
+    };
+
     start();
 
     return () => {
@@ -61,7 +79,14 @@ export function RoomView({ roomId }: RoomViewProps) {
           hubConnection.state ===
           HubConnectionState.Connected
         ) {
-          await hubConnection.invoke("LeaveRoom", roomId);
+          try {
+            await hubConnection.invoke(
+              "LeaveRoom",
+              roomId,
+            );
+          } catch {
+            // Connection may already be closed.
+          }
         }
 
         await hubConnection.stop();
@@ -78,23 +103,26 @@ export function RoomView({ roomId }: RoomViewProps) {
       <p>
         Room ID:
         <br />
-        {roomId}
+        <code>{roomId}</code>
       </p>
 
       <p>
-        Connection:
-        {" "}
+        Status:{" "}
         {connection ? "Connected" : "Connecting..."}
       </p>
 
-      <h3>Participants</h3>
+      <h3>
+        Participants ({participants.length})
+      </h3>
 
       {participants.length === 0 ? (
-        <p>No other participants yet.</p>
+        <p>No participants.</p>
       ) : (
         <ul>
           {participants.map((participant) => (
-            <li key={participant}>{participant}</li>
+            <li key={participant}>
+              {participant}
+            </li>
           ))}
         </ul>
       )}

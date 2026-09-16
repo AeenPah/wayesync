@@ -1,0 +1,103 @@
+import { useEffect, useState } from "react";
+import {
+  HubConnection,
+  HubConnectionState,
+} from "@microsoft/signalr";
+
+import { createWaveSyncConnection } from "../../realtime/wavesync";
+
+interface RoomViewProps {
+  roomId: string;
+}
+
+export function RoomView({ roomId }: RoomViewProps) {
+  const [connection, setConnection] =
+    useState<HubConnection | null>(null);
+
+  const [participants, setParticipants] = useState<string[]>([]);
+
+  useEffect(() => {
+    const hubConnection = createWaveSyncConnection();
+
+    const start = async () => {
+      try {
+        await hubConnection.start();
+
+        await hubConnection.invoke("JoinRoom", roomId);
+
+        setConnection(hubConnection);
+      } catch (error) {
+        console.error("Failed to connect to WaveSync:", error);
+      }
+    };
+
+    hubConnection.on(
+      "ParticipantJoined",
+      (connectionId: string) => {
+        setParticipants((current) => {
+          if (current.includes(connectionId)) {
+            return current;
+          }
+
+          return [...current, connectionId];
+        });
+      },
+    );
+
+    hubConnection.on(
+      "ParticipantLeft",
+      (connectionId: string) => {
+        setParticipants((current) =>
+          current.filter((id) => id !== connectionId),
+        );
+      },
+    );
+
+    start();
+
+    return () => {
+      const stop = async () => {
+        if (
+          hubConnection.state ===
+          HubConnectionState.Connected
+        ) {
+          await hubConnection.invoke("LeaveRoom", roomId);
+        }
+
+        await hubConnection.stop();
+      };
+
+      stop();
+    };
+  }, [roomId]);
+
+  return (
+    <section>
+      <h2>Room</h2>
+
+      <p>
+        Room ID:
+        <br />
+        {roomId}
+      </p>
+
+      <p>
+        Connection:
+        {" "}
+        {connection ? "Connected" : "Connecting..."}
+      </p>
+
+      <h3>Participants</h3>
+
+      {participants.length === 0 ? (
+        <p>No other participants yet.</p>
+      ) : (
+        <ul>
+          {participants.map((participant) => (
+            <li key={participant}>{participant}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

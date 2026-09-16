@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WaveSync.Api.Models;
 
 namespace WaveSync.Api.Data;
 
@@ -8,4 +9,6 @@ public class WaveSyncDbContext : DbContext
         : base(options)
     {
     }
+
+    public DbSet<Room> Rooms => Set<Room>();
 }

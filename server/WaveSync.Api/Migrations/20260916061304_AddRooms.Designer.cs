@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WaveSync.Api.Data;
@@ -11,9 +12,11 @@ using WaveSync.Api.Data;
 namespace WaveSync.Api.Migrations
 {
     [DbContext(typeof(WaveSyncDbContext))]
-    partial class WaveSyncDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916061304_AddRooms")]
+    partial class AddRooms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

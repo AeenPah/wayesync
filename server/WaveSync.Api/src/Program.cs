@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using WaveSync.Api.Data;
 using WaveSync.Api.Hubs;
+using WaveSync.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddSingleton<RoomStateService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
